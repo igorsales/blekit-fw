@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+  <service uuid="1800">
+    <description>Generic Access Profile</description>
+    <characteristic uuid="2a00">
+      <properties read="true" const="true" />
+      <value>BLEKit CarBeacon</value>
+    </characteristic>
+
+    <characteristic uuid="2a01">
+      <properties read="true" const="true" />
+      <value type="hex">0200</value>
+    </characteristic>
+  </service>
+
+  <service uuid="180A">
+    <description>Device Information</description>
+
+    <!-- Manufacturer Name String -->
+    <!-- org.bluetooth.characteristic.manufacturer_name_string -->
+    <characteristic uuid="2a29">
+      <properties read="true" const="true" />
+      <value>ble-kit.org</value>
+      <description>Manufacturer Name String</description>
+    </characteristic>
+  
+    <!-- Model Number String: Hardware ID string -->
+    <!-- org.bluetooth.characteristic.model_number_string -->
+    <characteristic uuid="2a24">
+      <properties read="true" const="true" />
+      <value>BLEKit CarBeacon Tag</value>
+      <description>Model Number String</description>
+    </characteristic>
+
+    <!-- Firmware Revision String -->
+    <!-- org.bluetooth.characteristic.firmware_revision_string -->
+    <characteristic uuid="2a26">
+      <properties read="true" const="true" />
+      <value>0.0.1</value>
+      <description>Firmware Revision String</description>
+    </characteristic>
+  
+    <!-- Hardware Revision String -->
+    <!-- org.bluetooth.characteristic.hardware_revision_string -->
+    <characteristic uuid="2a27">
+      <properties read="true" const="true" />
+      <value>1.2</value>
+      <description>Hardware Revision String</description>
+    </characteristic>   
+
+    <!-- F/W ID string -->
+    <characteristic uuid="5d5b1dd0-925c-4826-87f2-e2b8cb7a50a6">
+      <properties read="true" const="true" />
+      <value type="utf-8">blekit_carbeacon</value>
+      <description>Firmware ID String</description>
+    </characteristic>
+  </service>
+
+  <!-- OTA Service -->
+  <service uuid="1d14d6ee-fd63-4fa1-bfa4-8f47b42119f0">
+    <description>Bluegiga OTA Service</description>
+    <characteristic uuid="f7bf3564-fb6d-4e53-88a4-5e37e0326063" id="ota_control">
+      <properties write="true" read="true"/>
+      <value length="1" type="user" />
+      <description>OTA Control Point Attribute</description>
+    </characteristic>
+
+    <characteristic uuid="984227f3-34fc-4045-a5d0-2c581f81a153" id="ota_data">
+      <properties write_no_response="true" read="true"/>
+      <value length="23" type="user"/>
+      <description>OTA Data Attribute</description>
+    </characteristic>
+  </service>
+
+  <!-- BEGIN INSERTED SERVICES -->
+  <service uuid="9F93C11C-1FFE-4134-B037-7237728B4D2A" advertise="false">
+    <description>BLEKit Service</description>
+
+    <characteristic uuid="2F2496F6-7D21-4618-8B7D-873F669F8CCD">
+      <description>Capabilities</description>
+      <properties read="true" const="true" />
+      <!-- LSB (bit 0) to MSB (bit n) in LITTLE ENDIAN ordering
+        bits 0-4:    Number of PWM channels (up to 32 channels)
+        bit  5:      I2C enabled
+        bits 6-11:   Number of General Purpose Inputs (up to 64 Inputs)
+        bits 12-17:  Number of General Purpose Outputs (up to 64 Outputs)
+        bits 18-23:  Number of Analog to Digital Converters (up to 64 ADCs)
+        bits 24-31:  reserved
+
+        31    24 23  18 17  12 11   6 5 4   0
+        XXXXXXXX XXXXXX XXXXXX XXXXXX X XXXXX
+        00000000 000001 000000 000000 0 00000
+           0   0    0    4   0    0     0   0
+      -->
+      <value length="4" type="hex">00000400</value>
+    </characteristic>
+
+    <!-- ADCs. MSB == S1 -->
+    <characteristic uuid="D718013B-EE5C-45A5-9088-15987686BFA9" id="adcs">
+      <description>Analog to Digital Converters</description>
+      <properties read="true" notify="true"/>
+      <value length="2" type="user"></value>
+    </characteristic>
+  </service>
+
+  <service uuid="FB01F953-0AD5-432C-86B8-7CD64180152B">
+    <description>CarBeacon Configuration</description>
+
+    <characteristic uuid="A2C2B757-6F6A-43CE-9D47-555B0E95A244" id="carbeacon_configuration">
+      <description>Voltage and Timeout Settings</description>
+      <properties read="true" write="true"/>
+      <value length="12" type="user"></value>
+    </characteristic>
+
+    <characteristic uuid="47A298BF-193A-4307-98E2-AA0A67CB34E7" id="carbeacon_uuid">
+      <description>Beacon UUID, Major, Minor and Power</description>
+      <properties read="true" write="true"/>
+      <value length="21" type="user"></value>
+    </characteristic>
+  </service>
+  <!-- END INSERTED SERVICES -->
+</configuration>

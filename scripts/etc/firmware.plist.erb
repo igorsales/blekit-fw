@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>BLEKitBundleName</key>
+        <string><%= gatt.bundle_name %></string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>BLEKitHardwareVersion</key>
+        <string><%= gatt.hw_version %></string>
+        <key>BLEKitFirmwareVersion</key>
+        <string><%= gatt.fw_version %></string>
+        <key>BLEKitHardwareID</key>
+        <string><%= gatt.hw_id %></string>
+        <key>BLEKitFirmwareID</key>
+        <string><%= gatt.fw_id %></string>
+        <key>BLEKitFirmwareFile</key>
+        <string>firmware.bin</string>
+        <key>BLEKitIcons</key>
+        <array>
+                <% (icons || []).each_index do |icon_index| %>
+                <string>icon<%= "#{icon_index + 1}" %>.png</string>
+                <% end %>
+        </array>
+</dict>
+</plist>

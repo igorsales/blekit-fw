@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project>
+    <!-- Input -->
+	<device type="ble113-m256k" memory="256"/>
+	<gatt in="gatt.xml" />
+	<hardware in="hardware.xml" />
+	<config in="config_ble113-m256k.xml" />
+	<script in="blekit.bgs" />
+
+	<!-- Output -->
+	<image out="build/firmware.hex" />
+
+	<!-- Options -->
+	<ota out="build/firmware.bin" firmware="true" />
+	<boot fw="bootota" />
+</project>
