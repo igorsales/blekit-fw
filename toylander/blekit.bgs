@@ -57,14 +57,17 @@ const max_erase_page   = 64
 const h_restart        = 1
 const h_blinker        = 2
 const h_adc_read       = 3
+const h_turn_signal    = 4
 const blink_timeout    = 100000
 const blink_length     = 500
 const restart_timeout  = 25000
 const adc_read_timeout = 17 # every 500us
+const turn_signal_to   = 9830 # about 300ms
 
 dim retry_counter # Flash retry counter
 dim max_retries   # Flash retry counter
 dim blink_status
+dim turn_signal_status
 
 dim r # used for function results
 dim r_len
@@ -113,6 +116,30 @@ procedure accumulate_adc()
     if adc_samples < 16 then
         adc_samples = adc_samples + 1
     end if
+end
+
+procedure prepare_turn_signals()
+    # Cancel timer first
+    call hardware_set_soft_timer(0, h_turn_signal, 1)
+
+    # Off by default
+    turn_signal_status = 0
+
+    call hardware_io_port_write(2, 3, turn_signal_status)
+end
+
+procedure turn_signals_timer_handler()
+    # Left turn signal is on I3, # Right turn signal is I4, Active Low
+    #turn_signal_status = (turn_signal_status ^ ((gpi(0:1) >> 2) & 3))
+    if turn_signal_status = 0
+      turn_signal_status = (gpi(0:1) >> 2) ^ 3
+    else
+      turn_signal_status = 0
+    end if
+
+    call hardware_io_port_write(2, 3, turn_signal_status)
+
+    call hardware_set_soft_timer(turn_signal_to, h_turn_signal, 1)
 end
 
 #init gap mode
@@ -177,6 +204,9 @@ event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
     call attributes_write(pwm_ch_1_thru_10_default, 0, 8, t_pwm_ch_1_thru_4_def(0:8))
 
     call adjust_throttle_length_and_direction()
+
+    call prepare_turn_signals()
+    call turn_signals_timer_handler()
 end
 
 event hardware_soft_timer(handle)
@@ -197,6 +227,10 @@ event hardware_soft_timer(handle)
 
     if handle = h_adc_read
         call hardware_adc_read(0, 3, 2)(r)
+    end if
+
+    if handle = h_turn_signal
+        call turn_signals_timer_handler()
     end if
 end
 
@@ -357,8 +391,9 @@ event attributes_value(connection, reason, handle, offset, value_len, value_data
             # Not a valid command -> report application error code : 0x80
             call attributes_user_write_response(curr_connection, $80)
         else
-            gpo(0:1) = value_data(0:1)
-            call hardware_io_port_write(2, 7, gpo(0:1))
+            # TODO: Remove Outputs from GATT
+            #gpo(0:1) = value_data(0:1)
+            #call hardware_io_port_write(2, 7, gpo(0:1))
             call attributes_user_write_response(curr_connection, $0)
         end if
     end if
