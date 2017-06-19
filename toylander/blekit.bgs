@@ -74,11 +74,11 @@ dim r_len
 
 procedure adjust_throttle_length_and_direction()
     if (gpi(0:1) & 1) = 0 then
-    throttle_direction = -1 # Forward
-    throttle_length = 500
+        throttle_direction = 1 # Forward
+        throttle_length = 500
     else 
         if (gpi(0:1) & 2) = 0 then
-          throttle_direction = 1 # backward
+          throttle_direction = -1 # backward
           throttle_length = 250
         else
           throttle_direction = 0 # Neutral
@@ -142,6 +142,13 @@ procedure turn_signals_timer_handler()
     call hardware_set_soft_timer(turn_signal_to, h_turn_signal, 1)
 end
 
+procedure read_gp_inputs()
+    call hardware_io_port_read(0, $84)(r, tmp(0:1), tmp(1:1))
+    call hardware_io_port_read(1, $3c)(r, tmp(2:1), tmp(3:1))
+
+    gpi(0:1) = ((tmp(1:1) & $80) >> 6) | ((tmp(1:1) & $04) >> 2) | (tmp(3:1) & $3c)
+end
+
 #init gap mode
 event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
     
@@ -203,6 +210,7 @@ event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
     call attributes_write(pwm_ch_1_thru_10, 0, 8, t_pwm_ch_1_thru_4(0:8))
     call attributes_write(pwm_ch_1_thru_10_default, 0, 8, t_pwm_ch_1_thru_4_def(0:8))
 
+    call read_gp_inputs()
     call adjust_throttle_length_and_direction()
 
     call prepare_turn_signals()
@@ -448,10 +456,7 @@ event attributes_user_read_request(connection, handle, offset, maxsize)
     end if
 
     if handle = gp_inputs then
-        call hardware_io_port_read(0, $84)(r, tmp(0:1), tmp(1:1))
-        call hardware_io_port_read(1, $3c)(r, tmp(2:1), tmp(3:1))
-
-        gpi(0:1) = ((tmp(1:1) & $80) >> 6) | ((tmp(1:1) & $04) >> 2) | (tmp(3:1) & $3c)
+        call read_gp_inputs()
 
         call attributes_user_read_response(connection, 0, 1, gpi(0:1))
     end if
@@ -516,9 +521,8 @@ event hardware_io_port_status(timestamp, port, irq, state)
     if r != gpi(0:1) then
         gpi(0:1) = r
         call attributes_write(gp_inputs, 0, 1, gpi(0:1))
+        call adjust_throttle_length_and_direction()
     end if
-
-    call adjust_throttle_length_and_direction()
 end
 
 event hardware_adc_result(input, value)
