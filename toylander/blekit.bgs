@@ -58,11 +58,13 @@ const h_restart        = 1
 const h_blinker        = 2
 const h_adc_read       = 3
 const h_turn_signal    = 4
+const h_gpio_polling   = 5
 const blink_timeout    = 100000
 const blink_length     = 500
 const restart_timeout  = 25000
 const adc_read_timeout = 17 # every 500us
 const turn_signal_to   = 9830 # about 300ms
+const gpio_poll_to     = 3276 # every 100ms
 
 dim retry_counter # Flash retry counter
 dim max_retries   # Flash retry counter
@@ -149,6 +151,21 @@ procedure read_gp_inputs()
     gpi(0:1) = ((tmp(1:1) & $80) >> 6) | ((tmp(1:1) & $04) >> 2) | (tmp(3:1) & $3c)
 end
 
+procedure gpio_handler()
+    call hardware_io_port_read(0, $84)(r, tmp(0:1), tmp(1:1))
+    call hardware_io_port_read(1, $3c)(r, tmp(2:1), tmp(3:1))
+
+    r = ((tmp(1:1) & $80) >> 6) | ((tmp(1:1) & $04) >> 2) | (tmp(3:1) & $3c)
+
+    if r != gpi(0:1) then
+        gpi(0:1) = r
+        call attributes_write(gp_inputs, 0, 1, gpi(0:1))
+        call adjust_throttle_length_and_direction()
+    end if
+
+    call hardware_set_soft_timer(gpio_poll_to, h_gpio_polling, 1)
+end
+
 #init gap mode
 event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
     
@@ -187,6 +204,7 @@ event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
 
     call hardware_set_soft_timer(blink_timeout, h_blinker, 1)
     call hardware_set_soft_timer(adc_read_timeout, h_adc_read, 1)
+    call hardware_set_soft_timer(gpio_poll_to, h_gpio_polling, 1)
 
     # 60Hz in 1MHz ticks is 16666 ticks
     call hardware_timer_comparator(1, 0, 6, 16666)
@@ -239,6 +257,10 @@ event hardware_soft_timer(handle)
 
     if handle = h_turn_signal
         call turn_signals_timer_handler()
+    end if
+
+    if handle = h_gpio_polling then
+        call gpio_handler()
     end if
 end
 
@@ -513,16 +535,8 @@ event connection_disconnected(handle,result)
 end
 
 event hardware_io_port_status(timestamp, port, irq, state)
-    call hardware_io_port_read(0, $84)(r, tmp(0:1), tmp(1:1))
-    call hardware_io_port_read(1, $3c)(r, tmp(2:1), tmp(3:1))
-
-    r = ((tmp(1:1) & $80) >> 6) | ((tmp(1:1) & $04) >> 2) | (tmp(3:1) & $3c)
-
-    if r != gpi(0:1) then
-        gpi(0:1) = r
-        call attributes_write(gp_inputs, 0, 1, gpi(0:1))
-        call adjust_throttle_length_and_direction()
-    end if
+    call hardware_set_soft_timer(0, h_gpio_polling, 1)
+    call gpio_handler()
 end
 
 event hardware_adc_result(input, value)
