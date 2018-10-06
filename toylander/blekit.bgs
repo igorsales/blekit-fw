@@ -52,6 +52,7 @@ dim adc_read_ptr
 dim adc_samples
 dim throttle_direction
 dim throttle_length
+dim brake_light_pwm_offset
 
 const max_erase_page   = 64
 const h_restart        = 1
@@ -102,8 +103,20 @@ procedure adjust_headlights_and_rear_lights()
 
         # Rear lights are on half power, unless brake pedal is depressed
         t_pwm_ch_1_thru_4(4:2) = r/2
-        call hardware_timer_comparator(1, 3, 6, r/2)
+        call hardware_timer_comparator(1, 3, 6, r/2 + brake_light_pwm_offset)
     end if
+end
+
+procedure adjust_brake_lights()
+    # 30132 is 12-bit (full on = 32752) at 92%
+    if adc_buffer(2:2) < 30132 then # brake pedal depressed
+        # when brakes are applied, light should come full on
+        brake_light_pwm_offset = 4200
+    else
+        brake_light_pwm_offset = 0
+    end if
+
+    call hardware_timer_comparator(1, 3, 6, t_pwm_ch_1_thru_4(4:2) + brake_light_pwm_offset)
 end
 
 procedure set_pwm_width_for_throttle()
@@ -203,6 +216,7 @@ event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
     adc_read_buffer(0:32) = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
     throttle_length = 0
     throttle_direction = 0
+    brake_light_pwm_offset = 0
 
     call hardware_io_port_config_direction(0,$87) # Configure Port 0's inputs as P0_7, P0_2, P0_1 and P0_0
     call hardware_io_port_config_function(0,$7b) # Configure P0_6 (CH4), P0_5 (CH3), P0_4 (CH2), P0_3 (CH1), P0_1 (AIN2), P0_0 (AIN0) as peripherals
@@ -567,21 +581,24 @@ event hardware_adc_result(input, value)
         call set_pwm_width_for_throttle()
         
         # Only request if triggered by a read request from user
-        if adc_read_req = 1
+        #if adc_read_req = 1
             call hardware_adc_read(1, 3, 2)(r) #  Read AIN1 at 12-bits relative to AVDD, leave in 16-bit container
-        else
-            call hardware_set_soft_timer(adc_read_timeout, h_adc_read, 1)
-        end if
+        #else
+            #call hardware_set_soft_timer(adc_read_timeout, h_adc_read, 1)
+        #end if
     end if
 
     if input = 1 then
         adc_buffer(2:2) = value & $fff0
+
+        call adjust_brake_lights()
+
         if adc_read_req = 1
             # Uncomment for debugging purposes
             # r = 32768 - 32768 * ((adc_accum / adc_samples) - 2479) / 28685
             # adc_buffer(0:2) = r # TMP
             call attributes_user_read_response(curr_connection, 0, 4, adc_buffer(0:4))
-            adc_read_req = 0 # Reset read req buffer
+            adc_read_req = 0
         end if
 
         # Restart ADC read timer
