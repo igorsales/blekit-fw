@@ -89,6 +89,23 @@ procedure adjust_throttle_length_and_direction()
     end if
 end
 
+procedure adjust_headlights_and_rear_lights()
+    if (gpi(0:1) & 16) = 0 then # Active-low, so 0 means Headlights are ON
+        r = 4200
+    else
+        r = 0
+    end if
+
+    if r != t_pwm_ch_1_thru_4(2:2)
+        t_pwm_ch_1_thru_4(2:2) = r
+        call hardware_timer_comparator(1, 2, 6, r)
+
+        # Rear lights are on half power, unless brake pedal is depressed
+        t_pwm_ch_1_thru_4(4:2) = r/2
+        call hardware_timer_comparator(1, 3, 6, r/2)
+    end if
+end
+
 procedure set_pwm_width_for_throttle()
     # With 12 bits of precision, signed int max on a 16-bit word is 0b1111111111110000 (32752 or 0x7FF0)
     # These are taken from measurements based on VDD (0.25V/7.576%/2479 - 3.14V/95.15%/31164)
@@ -161,6 +178,7 @@ procedure gpio_handler()
         gpi(0:1) = r
         call attributes_write(gp_inputs, 0, 1, gpi(0:1))
         call adjust_throttle_length_and_direction()
+        call adjust_headlights_and_rear_lights()
     end if
 
     call hardware_set_soft_timer(gpio_poll_to, h_gpio_polling, 1)
@@ -207,22 +225,22 @@ event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
     call hardware_set_soft_timer(gpio_poll_to, h_gpio_polling, 1)
 
     # 60Hz in 1MHz ticks is 16666 ticks
-    call hardware_timer_comparator(1, 0, 6, 16666)
+    call hardware_timer_comparator(1, 0, 6, 4167) #16666)
 
     # configure channels at 1.5ms by default
     call hardware_timer_comparator(1, 1, 6, 1500)
-    call hardware_timer_comparator(1, 2, 6, 1500)
-    call hardware_timer_comparator(1, 3, 6, 1500)
+    call hardware_timer_comparator(1, 2, 6, 0) # Headlights start off
+    call hardware_timer_comparator(1, 3, 6, 0) # Rear lights start off
     call hardware_timer_comparator(1, 4, 6, 1500)
 
     t_pwm_ch_1_thru_4(0:2) = 1500
-    t_pwm_ch_1_thru_4(2:2) = 1500
-    t_pwm_ch_1_thru_4(4:2) = 1500
+    t_pwm_ch_1_thru_4(2:2) = 0
+    t_pwm_ch_1_thru_4(4:2) = 0
     t_pwm_ch_1_thru_4(6:2) = 1500
 
     t_pwm_ch_1_thru_4_def(0:2) = 1500
-    t_pwm_ch_1_thru_4_def(2:2) = 1500
-    t_pwm_ch_1_thru_4_def(4:2) = 1500
+    t_pwm_ch_1_thru_4_def(2:2) = 0
+    t_pwm_ch_1_thru_4_def(4:2) = 0
     t_pwm_ch_1_thru_4_def(6:2) = 1500
 
     call attributes_write(pwm_ch_1_thru_10, 0, 8, t_pwm_ch_1_thru_4(0:8))
@@ -230,6 +248,7 @@ event system_boot(major ,minor ,patch ,build ,ll_version ,protocol_version ,hw )
 
     call read_gp_inputs()
     call adjust_throttle_length_and_direction()
+    call adjust_headlights_and_rear_lights()
 
     call prepare_turn_signals()
     call turn_signals_timer_handler()

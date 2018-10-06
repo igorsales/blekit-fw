@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <hardware>
-    <sleeposc enable="true" ppm="30" />
+    <sleeposc enable="true" ppm="50" />
     <script enable="true" />
     <slow_clock enable="false" />
     <sleep enable="false" max_mode="3" />
@@ -20,5 +20,5 @@
 	<timer_ticks speed="5" />
     <timer index="1" enabled_channels="0x1e" divisor="0" mode="2" alternate="1" />
 
-    <otaboot source="internal" />    
+    <otaboot source="internal" />
 </hardware>
